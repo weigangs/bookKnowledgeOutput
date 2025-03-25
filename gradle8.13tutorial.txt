@@ -1,0 +1,155 @@
+1. 检测本地安装gradle
+	gradle -v
+2. 初始化一个项目
+	gradle init --type java-application  --dsl kotlin
+3. 运行Gradle Wrapper
+	Gradle Wrapper下载需要gradle二进制文件，如果本地没有安装得话
+	作用构建当前工程
+4. Understanding the Settings file
+	一个工程有一个或这多个子工程组成
+	gradle通过读取 settings.gradle(.kts)找出哪个子项目包含需要构建的工程
+	include调用对应的目录，并将其转为一个子项目
+5. Understanding the Build script
+	每个子工程包含一个build.gradle(.kts)文件
+	build.gradle文件包含构建一个工程的流程，比如依赖配置，用到哪些插件等
+6.1 runing tasks
+	查看都有哪些task $ ./gradlew tasks
+	只看某个子项目有哪些task ./gradlew :app:tasks.
+6.2 Understanding Tasks
+	tasks.register<Copy>("copyTask") {
+	    from("source")
+	    into("target")
+	    include("*.war")
+	}
+	This task, if added to build.gradle(.kts) file in the app subproject directory, would be executed using the command ./gradlew :app:copyTask
+6.3 Understanding Dependencies Between Tasks
+	任务按依赖顺序执行
+	tasks.register("hello") {
+	    doLast {
+	        println("Hello!")
+	    }
+	}
+
+	tasks.register("greet") {
+	    doLast {
+	        println("How are you?")
+	    }
+	    dependsOn("hello")
+	}
+7.1 Understanding the Version Catalog
+	版本目录用来集中定义工程的直接依赖，在项目初始化的时候生成在gradle/libs.versions.toml
+	[versions]
+	guava = "32.1.2-jre"
+	junit-jupiter = "5.10.0"
+
+	[libraries]
+	guava = { module = "com.google.guava:guava", version.ref = "guava" }
+	junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit-jupiter" }
+	然后在依赖中引用：
+	dependencies {
+	    implementation(libs.guava)
+	    testImplementation(libs.junit.jupiter)
+	}
+7.2 Understanding Project Dependencies
+	上面定义的依赖，在build.gradle(.kts)中直接引用，用maven作为依赖仓库
+	dependencies {
+	    // Use JUnit Jupiter for testing.
+	    testImplementation(libs.junit.jupiter)
+
+	    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+
+	    // This dependency is used by the application.
+	    implementation(libs.guava)
+	}
+7.3 Understanding Transitive Dependencies
+	理解以来传递，也就是说依赖的依赖
+7.4 Viewing Project Dependencies
+	查看工程依赖树：./gradlew :app:dependencies
+7.5 Viewing Dependencies in a Build Scan®
+	用build Scan查看工程依赖树--太麻烦不推荐
+7.6 Updating Project Dependencies
+	idea直接点刷新按钮，命令行跑build
+8.1 Understanding Plugins
+	插件给工程增加任务
+	扩展gradle功能
+	配置工程
+	应用定制化配置
+	扩展现有的属性和方法
+8.2 Applying a Plugin
+	在build.gradle(.kts)中加上以下内容，支持将工程构建的包发布到本地maven仓库中
+	plugins {
+	    // Apply the application plugin to add support for building a CLI application in Java.
+	    application
+	    id("maven-publish")
+	}
+8.3 Configuring the Plugin
+	在build.gradle(.kts)中加上以下内容
+	publishing {
+	    publications {
+	        create<MavenPublication>("maven") {
+	            groupId = "com.gradle.tutorial"
+	            artifactId = "tutorial"
+	            version = "1.0"
+
+	            from(components["java"])
+	        }
+	    }
+	}
+8.4 Using the Plugin
+	 ./gradlew :app:publishToMavenLocal
+8.5 Exploring Plugins
+	插件分类：
+		核心插件，由gradle团队维护：https://docs.gradle.org/current/userguide/plugin_reference.html#plugin_reference
+		社区插件，通过社区分享的插件：https://plugins.gradle.org/
+		自定义插件，通过使用gradle的API开发的插件：https://docs.gradle.org/current/dsl/org.gradle.api.tasks.javadoc.Javadoc.html
+	多个子项目共享构建逻辑，可以使用convention plugin，具体实现在buildSrc目录下 参考地址：https://docs.gradle.org/current/userguide/custom_plugins.html
+9.1 增量构建
+	当前任务执行结果未改变，构建时就跳过
+9.2 Updating Gradle Properties
+	In the top-level folder of your app (tutorial), create a gradle.properties file.
+
+	$ touch gradle.properties
+	Add org.gradle.console=verbose so the contents of the file look like this:
+9.3 Analyzing Incremental Builds
+	执行后，出现UP-TO-DATE
+10.1 Understanding Caching
+	
+11.1 Using Gradle’s Reference Materials
+	使用gradle参考资料
+	gradle api：http://gradle.org/docs/current/javadoc/
+	Gradle’s Groovy DSL：https://docs.gradle.org/current/dsl/index.html
+	Gradle’s Kotlin DSL：https://docs.gradle.org/current/kotlin-dsl/index.html
+
+	To find plugins:
+	Gradle Core Plugins：https://docs.gradle.org/current/userguide/plugin_reference.html#plugin_reference
+	Gradle Plugin Portal：https://plugins.gradle.org/
+12.1 Command-Line Interface Reference
+	gradle.properties 参考值：https://docs.gradle.org/current/userguide/build_environment.html#sec:gradle_configuration_properties
+	以下命令:
+	$ gradle subproject:taskName
+	跑所有工程的单侧：
+	$ gradle test
+	You can also specify multiple tasks. The tasks' dependencies determine the precise order of execution, and a task having no dependencies may execute earlier than it is listed on the command-line.
+	执行多个任务时，没有依赖的任务先执行
+	执行任务时，可排除任务
+	$ gradle dist --exclude-task test
+	强制执行，无视是否最新校验
+	$ gradle test --rerun-tasks
+	报错了，强制让gradle继续执行
+	$ gradle test --rerun-tasks
+	Name abbreviation
+	名称简写
+
+	列出项目
+	$ gradle projects
+	精准查询，对应任务组
+	$ gradle tasks --group="build setup"
+	查看构建环境，如jdk等信息
+	gradle buildEnvironment
+	查选中的项目的属性
+	gradle -q api:properties
+	不联网
+	gradle build --offline
+13.1 依赖管理
+	settings.gradle.kts里定义的仓库将作用整个工程
+	如果在子工程的build.gradle(.kts)定义了仓库，则子工程的定义会覆盖settings的定义
