@@ -153,3 +153,107 @@
 13.1 依赖管理
 	settings.gradle.kts里定义的仓库将作用整个工程
 	如果在子工程的build.gradle(.kts)定义了仓库，则子工程的定义会覆盖settings的定义
+	gradle的依赖传递性，自动引入依赖的依赖
+13.2 依赖的类型
+	模块依赖
+		dependencies {
+		    implementation("org.codehaus.groovy:groovy:3.0.5")
+		    implementation("org.codehaus.groovy:groovy-json:3.0.5")
+		    implementation("org.codehaus.groovy:groovy-nio:3.0.5")
+		}
+	工程依赖
+		dependencies {
+		    implementation(project(":utils"))
+		    implementation(project(":api"))
+		}
+	文件依赖
+		dependencies {
+		    runtimeOnly(files("libs/a.jar", "libs/b.jar"))
+		    runtimeOnly(fileTree("libs") { include("*.jar") })
+		}
+13.3 认识配置
+	配置仓库，如果一个依赖，在多个配置仓库可以找到，gradle将默认使用第一个
+		repositories {
+		    mavenCentral()  
+		    maven {         
+		        url = uri("https://company/com/maven2")
+		    }
+		    mavenLocal()    
+		    flatDir {       
+		        dirs("libs")
+		    }
+		}
+13.4 支持仓库类型
+	Different formats
+
+		a Maven compatible artifact repository (e.g: Maven Central)
+
+		an Ivy compatible artifact repository (including custom layouts)
+
+		local (flat) directories
+
+	with different connectivity
+
+		authenticated repositories
+
+		a wide variety of remote protocols such as HTTPS, SFTP, AWS S3 and Google Cloud Storage based on the presence of artifacts.
+
+	repositories {
+
+	    // Ivy Repository with Custom Layout
+	    ivy {
+	        url = 'https://your.ivy.repo/url'
+	        layout 'pattern', {
+	            ivy '[organisation]/[module]/[revision]/[type]s/[artifact]-[revision].[ext]'
+	            artifact '[organisation]/[module]/[revision]/[type]s/[artifact]-[revision].[ext]'
+	        }
+	    }
+
+	    // Authenticated HTTPS Maven Repository
+	    maven {
+	        url = 'https://your.secure.repo/url'
+	        credentials {
+	            username = 'your-username'
+	            password = 'your-password'
+	        }
+	    }
+
+	    // SFTP Repository
+	    maven {
+	        url = 'sftp://your.sftp.repo/url'
+	        credentials {
+	            username = 'your-username'
+	            password = 'your-password'
+	        }
+	    }
+
+	    // AWS S3 Repository
+	    maven {
+	        url = "s3://your-bucket/repository-path"
+	        credentials(AwsCredentials) {
+	            accessKey = 'your-access-key'
+	            secretKey = 'your-secret-key'
+	        }
+	    }
+
+	    // Google Cloud Storage Repository
+	    maven {
+	        url = "gcs://your-bucket/repository-path"
+	    }
+	}
+14.1 中心化依赖
+	使用平台，管理依赖传递
+14.2 依赖冲突解决
+	如果guava版本冲突，默认会选版本更高的一个
+	手动解决api相同冲突，比如两个库都提供了相同的API
+	configurations.configureEach {
+	    resolutionStrategy.capabilitiesResolution.withCapability("com.example:logging") {
+	        selectHighestVersion()
+	    }
+	}
+	用constraints选择某个版本，当发生冲突时
+	dependencies {
+	    constraints {
+	        implementation("org.apache.commons:commons-lang3:3.12.0")
+	    }
+	}
